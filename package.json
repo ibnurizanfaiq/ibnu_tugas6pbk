@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "server": "json-server --watch db.json --port 5000"
+    "start": "pm2 start server.js --name json-server"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.11",

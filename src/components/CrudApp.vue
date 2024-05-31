@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import axios from '../api/axios';
+import axios from 'axios';
 
 export default {
   data() {
@@ -41,6 +41,8 @@ export default {
       name: '',
       editing: false,
       currentItem: { id: null, name: '' },
+      binId: '66595a50acd3cb34a8506ea0', 
+      apiKey: '$2a$10$PWAbVgQGMZVH7nGI.4fe9e8wE.QGkVXzv0xZFjbw72MGksaXG3ax6' 
     };
   },
   mounted() {
@@ -48,27 +50,63 @@ export default {
   },
   methods: {
     async fetchItems() {
-      const response = await axios.get('/items');
-      this.items = response.data;
+      try {
+        const response = await axios.get(`https://api.jsonbin.io/v3/b/${this.binId}/latest`, {
+          headers: {
+            'X-Master-Key': this.apiKey,
+          },
+        });
+        this.items = response.data.record.items;
+      } catch (error) {
+        console.error('Error fetching items:', error);
+      }
     },
     async addItem() {
-      const response = await axios.post('/items', { name: this.name });
-      this.items.push(response.data);
-      this.name = '';
+      try {
+        const newItem = { id: Date.now(), name: this.name };
+        this.items.push(newItem);
+        await this.updateItems();
+        this.name = '';
+      } catch (error) {
+        console.error('Error adding item:', error);
+      }
     },
     async deleteItem(id) {
-      await axios.delete(`/items/${id}`);
-      this.items = this.items.filter(item => item.id !== id);
+      try {
+        this.items = this.items.filter(item => item.id !== id);
+        await this.updateItems();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+      }
     },
     startEditing(item) {
       this.editing = true;
       this.currentItem = { ...item };
     },
     async editItem() {
-      const response = await axios.put(`/items/${this.currentItem.id}`, this.currentItem);
-      this.items = this.items.map(item => (item.id === this.currentItem.id ? response.data : item));
-      this.editing = false;
-      this.currentItem = { id: null, name: '' };
+      try {
+        const index = this.items.findIndex(item => item.id === this.currentItem.id);
+        if (index !== -1) {
+          this.items.splice(index, 1, this.currentItem);
+          await this.updateItems();
+          this.editing = false;
+          this.currentItem = { id: null, name: '' };
+        }
+      } catch (error) {
+        console.error('Error editing item:', error);
+      }
+    },
+    async updateItems() {
+      try {
+        await axios.put(`https://api.jsonbin.io/v3/b/${this.binId}`, { items: this.items }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': this.apiKey,
+          },
+        });
+      } catch (error) {
+        console.error('Error updating items:', error);
+      }
     },
     updateName(value) {
       if (this.editing) {
@@ -76,10 +114,11 @@ export default {
       } else {
         this.name = value;
       }
-    }
+    },
   },
 };
 </script>
+
 
 <style scoped>
 .container {
